@@ -62,7 +62,8 @@
 ## 실행 화면 (과제4)
 - 코드의 실행 스크린샷과 구현 내용 설명
 
-![실행화면](img/screenshot-4.png)
+![실행화면](img/screenshot4.png)
+![실행화면](img/screenshot4-1.png)
 
 - 구현한 내용 (위 그림 참조)
     - 구현한 내용 (위 그림 참조)

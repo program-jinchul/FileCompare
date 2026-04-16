@@ -278,6 +278,7 @@
             btnCopyFromRight.TabIndex = 2;
             btnCopyFromRight.Text = "<<<";
             btnCopyFromRight.UseVisualStyleBackColor = true;
+            btnCopyFromRight.Click += btnCopyFromRight_Click;
             // 
             // Form1
             // 

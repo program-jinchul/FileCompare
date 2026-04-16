@@ -217,6 +217,48 @@ namespace FileCompare
 
             MessageBox.Show("왼쪽에서 오른쪽으로 복사가 완료되었습니다!");
         }
+
+        private void btnCopyFromRight_Click(object sender, EventArgs e)
+        {
+            // 1. 오른쪽 리스트뷰(lvwRightDir)에서 선택된 항목이 있는지 확인
+            if (lvwRightDir.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("복사할 파일을 오른쪽 목록에서 선택해주세요.");
+                return;
+            }
+
+            // 2. 경로 설정 (오른쪽이 Source, 왼쪽이 Target)
+            string sourceDir = txtRightDir.Text;
+            string targetDir = txtLeftDir.Text;
+
+            // 3. 선택된 항목들을 루프 돌며 복사
+            foreach (ListViewItem item in lvwRightDir.SelectedItems)
+            {
+                // 폴더(<DIR>)인 경우는 제외하고 파일만 처리
+                if (item.SubItems[1].Text == "<DIR>") continue;
+
+                string fileName = item.Text;
+                string sourcePath = Path.Combine(sourceDir, fileName);
+                string targetPath = Path.Combine(targetDir, fileName);
+
+                try
+                {
+                    // 파일 복사 (true: 왼쪽 폴더에 이미 있으면 덮어쓰기)
+                    File.Copy(sourcePath, targetPath, true);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"{fileName} 복사 중 오류: {ex.Message}");
+                }
+            }
+
+            // 4. 복사 완료 후 양쪽 리스트 갱신 및 색상 다시 비교
+            PopulateListView(lvwLeftDir, targetDir);
+            PopulateListView(lvwRightDir, sourceDir);
+            CompareFiles();
+
+            MessageBox.Show("오른쪽에서 왼쪽으로 복사가 완료되었습니다!");
+        }
     }
 }
     

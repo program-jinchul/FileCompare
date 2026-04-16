@@ -1,3 +1,10 @@
+using System;
+using System.Data;
+using System.Drawing;      // Color 구조체를 쓰기 위해 필수!
+using System.IO;           // Directory, FileInfo를 쓰기 위해 필수!
+using System.Linq;         // Select, OrderBy를 쓰기 위해 필수!
+using System.Windows.Forms;
+
 namespace FileCompare
 {
     public partial class Form1 : Form
@@ -12,6 +19,99 @@ namespace FileCompare
 
         }
 
+        private void PopulateListView(ListView lv, string folderPath)
+        {
+            lv.BeginUpdate(); lv.Items.Clear();
+            try
+            { // 폴더(디렉터리) 먼저 추가
+                var dirs = Directory.EnumerateDirectories(folderPath)
+                    .Select(p => new DirectoryInfo(p)).OrderBy(d => d.Name);
+                foreach (var d in dirs)
+                {
+                    var item = new ListViewItem(d.Name);
+                    item.SubItems.Add("<DIR>");
+                    item.SubItems.Add(d.LastWriteTime.ToString("g"));
+                    lv.Items.Add(item);
+                }
+                // 파일 추가
+                var files = Directory.EnumerateFiles(folderPath)
+                    .Select(p => new FileInfo(p)).OrderBy(f => f.Name);
+                foreach (var f in files)
+                {
+                    var item = new ListViewItem(f.Name);
+                    item.SubItems.Add(f.Length.ToString("N0") + " 바이트");
+                    item.SubItems.Add(f.LastWriteTime.ToString("g"));
+                    lv.Items.Add(item);
+                }
+                // 컬럼 너비 자동 조정(컨텐츠 기준)
+                for (int i = 0; i < lv.Columns.Count; i++)
+                {
+                    lv.AutoResizeColumn(i, ColumnHeaderAutoResizeStyle.ColumnContent);
+                }
+            }
+            catch (DirectoryNotFoundException)
+            {
+                MessageBox.Show(this, "폴더를 찾을 수 없습니다.", "오류",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show(this, "입출력 오류: " + ex.Message, "오류",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                lv.EndUpdate();
+            }
+        }
+
+        private void CompareFiles()
+        {
+            // 양쪽 리스트뷰에 아이템이 없으면 중단
+            if (lvwLeftDir.Items.Count == 0 && lvwRightDir.Items.Count == 0) return;
+
+            // 모든 아이템 일단 검은색으로 초기화
+            foreach (ListViewItem item in lvwLeftDir.Items) item.ForeColor = Color.Black;
+            foreach (ListViewItem item in lvwRightDir.Items) item.ForeColor = Color.Black;
+            // 왼쪽 기준 비교
+            foreach (ListViewItem leftItem in lvwLeftDir.Items)
+            {
+                // 오른쪽 리스트에서 같은 이름 찾기
+                ListViewItem rightItem = FindItemByName(lvwRightDir, leftItem.Text);
+
+                if (rightItem == null) // 왼쪽만 있음
+                {
+                    leftItem.ForeColor = Color.Purple;
+                }
+                else // 양쪽 다 있음 -> 시간 비교
+                {
+                    DateTime leftTime = DateTime.Parse(leftItem.SubItems[2].Text);
+                    DateTime rightTime = DateTime.Parse(rightItem.SubItems[2].Text);
+
+                    if (leftTime > rightTime) { leftItem.ForeColor = Color.Red; rightItem.ForeColor = Color.Gray; }
+                    else if (leftTime < rightTime) { leftItem.ForeColor = Color.Gray; rightItem.ForeColor = Color.Red; }
+                }
+            }
+
+            // 오른쪽 단독 파일 처리 (오른쪽에만 있는 보라색 찾기)
+            foreach (ListViewItem rightItem in lvwRightDir.Items)
+            {
+                if (FindItemByName(lvwLeftDir, rightItem.Text) == null)
+                {
+                    rightItem.ForeColor = Color.Purple;
+                }
+            }
+        }
+
+        // 이름으로 아이템 찾아주는 도우미 함수
+        private ListViewItem FindItemByName(ListView lv, string name)
+        {
+            foreach (ListViewItem item in lv.Items)
+            {
+                if (item.Text == name) return item;
+            }
+            return null;
+        }
         private void button4_Click(object sender, EventArgs e)
         {
 
@@ -56,10 +156,25 @@ namespace FileCompare
                     txtRightDir.Text = dlg.SelectedPath;
                 }
             }
-        } 
+        }
 
+        private void txtLeftDir_TextChanged(object sender, EventArgs e)
+        {
+            if (Directory.Exists(txtLeftDir.Text))
+            {
+                PopulateListView(lvwLeftDir, txtLeftDir.Text);
+                CompareFiles(); // 색상 비교 함수 호출
+            }
+        }
 
-
+        private void txtRightDir_TextChanged(object sender, EventArgs e)
+        {
+            if (Directory.Exists(txtRightDir.Text))
+            {
+                PopulateListView(lvwRightDir, txtRightDir.Text);
+                CompareFiles(); // 색상 비교 함수 호출
+            }
+        }
     }
-    }
+}
     

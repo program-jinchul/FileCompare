@@ -175,6 +175,48 @@ namespace FileCompare
                 CompareFiles(); // 색상 비교 함수 호출
             }
         }
+
+        private void btnCopyFromLeft_Click(object sender, EventArgs e)
+        {
+            // 1. 왼쪽 리스트뷰(lvwLeftDir)에서 선택된 항목이 있는지 확인
+            if (lvwLeftDir.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("복사할 파일을 왼쪽 목록에서 선택해주세요.");
+                return;
+            }
+
+            // 2. 경로 설정
+            string sourceDir = txtLeftDir.Text;
+            string targetDir = txtRightDir.Text;
+
+            // 3. 선택된 항목들을 루프 돌며 복사
+            foreach (ListViewItem item in lvwLeftDir.SelectedItems)
+            {
+                // 폴더(<DIR>)인 경우는 제외하고 파일만 처리
+                if (item.SubItems[1].Text == "<DIR>") continue;
+
+                string fileName = item.Text;
+                string sourcePath = Path.Combine(sourceDir, fileName);
+                string targetPath = Path.Combine(targetDir, fileName);
+
+                try
+                {
+                    // 파일 복사 (true: 이미 파일이 존재하면 최신 내용으로 덮어쓰기)
+                    File.Copy(sourcePath, targetPath, true);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"{fileName} 복사 중 오류: {ex.Message}");
+                }
+            }
+
+            // 4. 복사 완료 후 리스트 갱신 및 색상 다시 비교 (중요!)
+            PopulateListView(lvwLeftDir, sourceDir);
+            PopulateListView(lvwRightDir, targetDir);
+            CompareFiles();
+
+            MessageBox.Show("왼쪽에서 오른쪽으로 복사가 완료되었습니다!");
+        }
     }
 }
     

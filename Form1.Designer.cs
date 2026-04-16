@@ -50,6 +50,7 @@
             txtRightDir = new TextBox();
             panel4 = new Panel();
             btnCopyFromRight = new Button();
+            btnDelete = new Button();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
@@ -261,6 +262,7 @@
             // panel4
             // 
             panel4.BackColor = Color.Blue;
+            panel4.Controls.Add(btnDelete);
             panel4.Controls.Add(btnCopyFromRight);
             panel4.Dock = DockStyle.Top;
             panel4.Location = new Point(0, 0);
@@ -279,6 +281,18 @@
             btnCopyFromRight.Text = "<<<";
             btnCopyFromRight.UseVisualStyleBackColor = true;
             btnCopyFromRight.Click += btnCopyFromRight_Click;
+            // 
+            // btnDelete
+            // 
+            btnDelete.Anchor = AnchorStyles.Left;
+            btnDelete.Font = new Font("맑은 고딕", 16.125F, FontStyle.Bold, GraphicsUnit.Point, 129);
+            btnDelete.Location = new Point(608, 38);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(150, 74);
+            btnDelete.TabIndex = 3;
+            btnDelete.Text = "삭제";
+            btnDelete.UseVisualStyleBackColor = true;
+            btnDelete.Click += btnDelete_Click;
             // 
             // Form1
             // 
@@ -330,5 +344,6 @@
         private ColumnHeader columnHeader1;
         private ColumnHeader columnHeader4;
         private ColumnHeader columnHeader5;
+        private Button btnDelete;
     }
 }

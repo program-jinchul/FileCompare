@@ -42,6 +42,13 @@ namespace FileCompare
             }
         }
 
+        private void RefreshAndCompare()
+        {
+            PopulateListView(lvwLeftDir, txtLeftDir.Text);
+            PopulateListView(lvwRightDir, txtRightDir.Text);
+            CompareFiles();
+        }
+
         private void PopulateListView(ListView lv, string folderPath)
         {
             lv.BeginUpdate(); lv.Items.Clear();
@@ -201,89 +208,76 @@ namespace FileCompare
 
         private void btnCopyFromLeft_Click(object sender, EventArgs e)
         {
-            // 1. 왼쪽 리스트뷰(lvwLeftDir)에서 선택된 항목이 있는지 확인if (lvwLeftDir.SelectedItems.Count == 0) return;if (lvwLeftDir.SelectedItems.Count == 0) return;
-
-            string sourceDir = txtLeftDir.Text;
-            string targetDir = txtRightDir.Text;
+            if (lvwLeftDir.SelectedItems.Count == 0) return;
 
             foreach (ListViewItem item in lvwLeftDir.SelectedItems)
             {
-                string name = item.Text;
-                string sourcePath = Path.Combine(sourceDir, name);
-                string targetPath = Path.Combine(targetDir, name);
+                // 1. 회색(Old) 파일이면 복사 건너뛰기 (차단 로직)
+                if (item.ForeColor.ToArgb() == Color.Gray.ToArgb()) continue;
 
-                if (item.SubItems[1].Text == "<DIR>")
+                string sourcePath = Path.Combine(txtLeftDir.Text, item.Text);
+                string targetPath = Path.Combine(txtRightDir.Text, item.Text);
+
+                try
                 {
-                    try
-                    {
-                        // [2단계 핵심] 단순 생성이 아니라 내부까지 복사!
-                        CopyDirectory(sourcePath, targetPath);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"폴더 복사 실패: {ex.Message}");
-                    }
+                    if (item.SubItems[1].Text == "<DIR>") CopyDirectory(sourcePath, targetPath);
+                    else File.Copy(sourcePath, targetPath, true);
                 }
-                else
-                {
-                    try
-                    {
-                        File.Copy(sourcePath, targetPath, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"{name} 파일 복사 실패: {ex.Message}");
-                    }
-                }
+                catch (Exception ex) { MessageBox.Show($"{item.Text} 복사 실패: {ex.Message}"); }
             }
-
-            // 화면 갱신 및 다시 색칠
-            PopulateListView(lvwLeftDir, sourceDir);
-            PopulateListView(lvwRightDir, targetDir);
-            CompareFiles();
-            MessageBox.Show("폴더 및 파일 복사 완료!");
+            RefreshAndCompare(); // 갱신 및 비교 함수 (따로 만들어두면 편함)
         }
 
         private void btnCopyFromRight_Click(object sender, EventArgs e)
         {
-            // 1. 오른쪽 리스트뷰(lvwRightDir)에서 선택된 항목이 있는지 확인
-            if (lvwRightDir.SelectedItems.Count == 0)
-            {
-                MessageBox.Show("복사할 파일을 오른쪽 목록에서 선택해주세요.");
-                return;
-            }
+            if (lvwRightDir.SelectedItems.Count == 0) return;
 
-            // 2. 경로 설정 (오른쪽이 Source, 왼쪽이 Target)
-            string sourceDir = txtRightDir.Text;
-            string targetDir = txtLeftDir.Text;
-
-            // 3. 선택된 항목들을 루프 돌며 복사
             foreach (ListViewItem item in lvwRightDir.SelectedItems)
             {
-                // 폴더(<DIR>)인 경우는 제외하고 파일만 처리
-                if (item.SubItems[1].Text == "<DIR>") continue;
+                // 1. 회색(Old) 파일이면 복사 건너뛰기 (차단 로직)
+                if (item.ForeColor.ToArgb() == Color.Gray.ToArgb()) continue;
 
-                string fileName = item.Text;
-                string sourcePath = Path.Combine(sourceDir, fileName);
-                string targetPath = Path.Combine(targetDir, fileName);
+                string sourcePath = Path.Combine(txtRightDir.Text, item.Text);
+                string targetPath = Path.Combine(txtLeftDir.Text, item.Text);
 
                 try
                 {
-                    // 파일 복사 (true: 왼쪽 폴더에 이미 있으면 덮어쓰기)
-                    File.Copy(sourcePath, targetPath, true);
+                    if (item.SubItems[1].Text == "<DIR>") CopyDirectory(sourcePath, targetPath);
+                    else File.Copy(sourcePath, targetPath, true);
                 }
-                catch (Exception ex)
+                catch (Exception ex) { MessageBox.Show($"{item.Text} 복사 실패: {ex.Message}"); }
+            }
+            RefreshAndCompare();
+        }
+
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            // 어느 쪽 리스트뷰에서 선택했는지 확인 (왼쪽 기준 예시)
+            ListView targetLv = lvwLeftDir.SelectedItems.Count > 0 ? lvwLeftDir : lvwRightDir;
+            string targetDir = targetLv == lvwLeftDir ? txtLeftDir.Text : txtRightDir.Text;
+
+            if (targetLv.SelectedItems.Count == 0) return;
+
+            if (MessageBox.Show("선택한 항목을 삭제하시겠습니까?", "삭제 확인", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            {
+                foreach (ListViewItem item in targetLv.SelectedItems)
                 {
-                    MessageBox.Show($"{fileName} 복사 중 오류: {ex.Message}");
+                    string path = Path.Combine(targetDir, item.Text);
+                    try
+                    {
+                        if (item.SubItems[1].Text == "<DIR>")
+                            Directory.Delete(path, true); // true: 하위 내용까지 삭제
+                        else
+                            File.Delete(path);
+                    }
+                    catch (Exception ex) { MessageBox.Show($"삭제 실패: {ex.Message}"); }
                 }
+                // 삭제 후 새로고침
+                PopulateListView(lvwLeftDir, txtLeftDir.Text);
+                PopulateListView(lvwRightDir, txtRightDir.Text);
+                CompareFiles();
             }
 
-            // 4. 복사 완료 후 양쪽 리스트 갱신 및 색상 다시 비교
-            PopulateListView(lvwLeftDir, targetDir);
-            PopulateListView(lvwRightDir, sourceDir);
-            CompareFiles();
-
-            MessageBox.Show("오른쪽에서 왼쪽으로 복사가 완료되었습니다!");
         }
     }
 }
